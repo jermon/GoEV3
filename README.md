@@ -28,6 +28,13 @@ First, we need to install ev3dev onto a Micro SD card (by using an SD card, we c
 
 ### Google Go
 
+Goggle go version 1.5 and later has a exelent cross compiling capabilities. 
+You can make Go compile for Lego Ev3 by setting up two environment variables.
+  export GOOS=linux 
+  export GOARCH=arm
+Now you can use the standarad go tool and then transfer the resulting binary.
+
+
 Go now comes pre-installed on the ev3dev. For the latest ev3dev release (3.16.7-ckt14-6-ev3dev-ev3) the version is 1.3.3. Let's check it:
 
 	root@ev3dev:~# go version

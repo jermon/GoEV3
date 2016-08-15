@@ -2,11 +2,12 @@
 package Motor
 
 import (
-	"github.com/ldmberman/GoEV3/utilities"
+	"github.com/jermon/GoEV3/utilities"
 	"log"
 	"os"
 	"path"
 )
+
 
 // Constants for output ports.
 type OutPort string
@@ -17,6 +18,12 @@ const (
 	OutPortC         = "C"
 	OutPortD         = "D"
 )
+
+// Motor type.
+type Motor struct {
+	port OutPort
+	folder string
+}
 
 // Names of files which constitute the low-level motor API
 const (
@@ -31,7 +38,16 @@ const (
 	runFD            = "command"
 	stopModeFD       = "stop_command"
 	positionFD       = "position"
+	stateFD          = "state"
 )
+
+func FindMotor(port OutPort) *Motor {
+	m := new(Motor)
+	m.port = port
+
+	m.folder = findFolder(port)
+	return m
+}
 
 func findFolder(port OutPort) string {
 	if _, err := os.Stat(rootMotorPath); os.IsNotExist(err) {
@@ -69,65 +85,76 @@ func findFolder(port OutPort) string {
 // which ranges from about -1000 to 1000. The actual range depends on the type of the motor - see ev3dev docs.
 //
 // Negative values indicate reverse motion regardless of the regulation mode.
-func Run(port OutPort, speed int16) {
-	folder := findFolder(port)
-	regulationMode := utilities.ReadStringValue(folder, regulationModeFD)
+func (self Motor) Run(speed int16) {
+	regulationMode := utilities.ReadStringValue(self.folder, regulationModeFD)
 
 	switch regulationMode {
 	case "on":
-		utilities.WriteIntValue(folder, speedSetterFD, int64(speed))
-		utilities.WriteStringValue(folder, runFD, "run-forever")
+		utilities.WriteIntValue(self.folder, speedSetterFD, int64(speed))
+		utilities.WriteStringValue(self.folder, runFD, "run-forever")
 	case "off":
 		if speed > 100 || speed < -100 {
 			log.Fatal("The speed must be in range [-100, 100]")
 		}
-		utilities.WriteIntValue(folder, powerSetterFD, int64(speed))
-		utilities.WriteStringValue(folder, runFD, "run-forever")
+		utilities.WriteIntValue(self.folder, powerSetterFD, int64(speed))
+		utilities.WriteStringValue(self.folder, runFD, "run-forever")
 	}
 }
 
+func (self Motor) Turn(command string, data int64) {
+	utilities.WriteIntValue(self.folder, powerSetterFD, 50)
+	utilities.WriteIntValue(self.folder, "position_sp", data)
+	utilities.WriteStringValue(self.folder, runFD, command)
+}
+
 // Stops the motor at the given port.
-func Stop(port OutPort) {
-	utilities.WriteStringValue(findFolder(port), runFD, "stop")
+func (self Motor) Stop() {
+	utilities.WriteStringValue(self.folder, runFD, "stop")
 }
 
 // Reads the operating speed of the motor at the given port.
-func CurrentSpeed(port OutPort) int16 {
-	return utilities.ReadInt16Value(findFolder(port), speedGetterFD)
+func (self Motor) CurrentSpeed() int16 {
+	return utilities.ReadInt16Value(self.folder, speedGetterFD)
 }
 
 // Reads the operating power of the motor at the given port.
-func CurrentPower(port OutPort) int16 {
-	return utilities.ReadInt16Value(findFolder(port), powerGetterFD)
+func (self Motor) CurrentPower() int16 {
+	return utilities.ReadInt16Value(self.folder, powerGetterFD)
 }
 
 // Enables regulation mode, causing the motor at the given port to compensate
 // for any resistance and maintain its target speed.
-func EnableRegulationMode(port OutPort) {
-	utilities.WriteStringValue(findFolder(port), regulationModeFD, "on")
+func (self Motor) EnableRegulationMode() {
+	utilities.WriteStringValue(self.folder, regulationModeFD, "on")
 }
 
 // Disables regulation mode. Regulation mode is off by default.
-func DisableRegulationMode(port OutPort) {
+func (self Motor) DisableRegulationMode(port OutPort) {
 	utilities.WriteStringValue(findFolder(port), regulationModeFD, "off")
 }
 
 // Enables brake mode, causing the motor at the given port to brake to stops.
-func EnableBrakeMode(port OutPort) {
-	utilities.WriteStringValue(findFolder(port), stopModeFD, "brake")
+func (self Motor) EnableBrakeMode() {
+	utilities.WriteStringValue(self.folder, stopModeFD, "brake")
 }
 
 // Disables brake mode, causing the motor at the given port to coast to stops. Brake mode is off by default.
-func DisableBrakeMode(port OutPort) {
-	utilities.WriteStringValue(findFolder(port), stopModeFD, "coast")
+func (self Motor) DisableBrakeMode() {
+	utilities.WriteStringValue(self.folder, stopModeFD, "coast")
 }
 
 // Reads the position of the motor at the given port.
-func CurrentPosition(port OutPort) int32 {
-	return utilities.ReadInt32Value(findFolder(port), positionFD)
+func (self Motor) CurrentPosition() int32 {
+	return utilities.ReadInt32Value(self.folder, positionFD)
 }
 
 // Set the position of the motor at the given port.
-func InitializePosition(port OutPort, value int32) {
-	utilities.WriteIntValue(findFolder(port), positionFD, int64(value))
+func (self Motor) InitializePosition(value int32) {
+	utilities.WriteIntValue(self.folder, positionFD, int64(value))
 }
+
+// Get motor state
+func (self Motor) GetState() string {
+  return utilities.ReadStringValue(self.folder, stateFD)
+}
+

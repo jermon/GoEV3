@@ -3,7 +3,7 @@ package LED
 
 import (
 	"fmt"
-	"github.com/ldmberman/GoEV3/utilities"
+	"github.com/jermon/GoEV3/utilities"
 	"log"
 	"os"
 )

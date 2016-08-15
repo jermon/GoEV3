@@ -2,21 +2,23 @@ package Sensors
 
 import (
 	"fmt"
-	"github.com/ldmberman/GoEV3/utilities"
+	"github.com/jermon/GoEV3/utilities"
 )
 
 // Color sensor type.
 type ColorSensor struct {
 	port InPort
+	path string
 }
 
 // Provides access to a color sensor at the given port.
 func FindColorSensor(port InPort) *ColorSensor {
-	findSensor(port, TypeColor)
+	snr := findSensor(port, TypeColor)
 
 	s := new(ColorSensor)
 	s.port = port
 
+	s.path = fmt.Sprintf("%s/%s", baseSensorPath, snr)
 	return s
 }
 
@@ -57,33 +59,24 @@ func (self Color) String() string {
 
 // Reads one of seven color values.
 func (self *ColorSensor) ReadColor() Color {
-	snr := findSensor(self.port, TypeColor)
-
-	path := fmt.Sprintf("%s/%s", baseSensorPath, snr)
-	utilities.WriteStringValue(path, "mode", "COL-COLOR")
-	value := utilities.ReadUInt8Value(path, "value0")
+	utilities.WriteStringValue(self.path, "mode", "COL-COLOR")
+	value := utilities.ReadUInt8Value(self.path, "value0")
 
 	return Color(value)
 }
 
 // Reads the reflected light intensity in range [0, 100].
 func (self *ColorSensor) ReadReflectedLightIntensity() uint8 {
-	snr := findSensor(self.port, TypeColor)
-
-	path := fmt.Sprintf("%s/%s", baseSensorPath, snr)
-	utilities.WriteStringValue(path, "mode", "COL-REFLECT")
-	value := utilities.ReadUInt8Value(path, "value0")
+	utilities.WriteStringValue(self.path, "mode", "COL-REFLECT")
+	value := utilities.ReadUInt8Value(self.path, "value0")
 
 	return value
 }
 
 // Reads the ambient light intensity in range [0, 100].
 func (self *ColorSensor) ReadAmbientLightIntensity() uint8 {
-	snr := findSensor(self.port, TypeColor)
-
-	path := fmt.Sprintf("%s/%s", baseSensorPath, snr)
-	utilities.WriteStringValue(path, "mode", "COL-AMBIENT")
-	value := utilities.ReadUInt8Value(path, "value0")
+	utilities.WriteStringValue(self.path, "mode", "COL-AMBIENT")
+	value := utilities.ReadUInt8Value(self.path, "value0")
 
 	return value
 }

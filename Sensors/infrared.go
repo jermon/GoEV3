@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ldmberman/GoEV3/utilities"
+	"github.com/jermon/GoEV3/utilities"
 )
 
 const (
@@ -22,6 +22,15 @@ const (
 	Channel2         = 1
 	Channel3         = 2
 	Channel4         = 3
+
+/*	
+	Mode-IR-PROX String  = "IR-PROX"
+	Mode-IR-SEEK         = "IR-SEEK"
+	Mode-IR-REMOTE       = "IR-REMOTE"
+	Mode-IR-REM-A        = "IR-REM-A"
+	Mode-IR-S-ALT        = "IR-S-ALT"
+	Mode-IR-CAL          = "IR-CAL"
+*/	
 )
 
 var (
@@ -32,6 +41,7 @@ type (
 	// Infrared sensor type.
 	InfraredSensor struct {
 		port InPort
+		path string
 	}
 
 	RemoteSignal struct {
@@ -44,27 +54,56 @@ type (
 
 // Provides access to an infrared sensor at the given port.
 func FindInfraredSensor(port InPort) *InfraredSensor {
-	findSensor(port, TypeInfrared)
+	snr := findSensor(port, TypeInfrared)
 
 	s := new(InfraredSensor)
 	s.port = port
+	s.path = fmt.Sprintf("%s/%s", baseSensorPath, snr)
 
 	return s
 }
 
+func (self *InfraredSensor) WriteMode(mode string) {
+  utilities.WriteStringValue(self.path, "mode", mode)
+}
+
+func (self *InfraredSensor) ReadIRSEEK(channel int16) (int16, int16){
+
+	var channel1 string
+	var channel2 string
+	
+	switch channel {
+	case 1:
+	  channel1 = "value0"
+	  channel2 = "value1"
+	case 2:
+	  channel1 = "value2"
+	  channel2 = "value3"
+	case 3:
+	  channel1 = "value4"
+	  channel2 = "value5"
+	case 4:
+	  channel1 = "value6"
+	  channel2 = "value7"
+	  }
+	utilities.WriteStringValue(self.path, "mode", "IR-SEEK")
+	heading :=   utilities.ReadInt16Value(self.path, channel1)
+	distance :=  utilities.ReadInt16Value(self.path, channel2)
+  return heading, distance
+}
+
 // Reads the proximity value (in range 0 - 100) reported by the infrared sensor. A value of 100 corresponds to a range of approximately 70 cm.
 func (self *InfraredSensor) ReadProximity() uint8 {
-	snr := findSensor(self.port, TypeInfrared)
 
-	path := fmt.Sprintf("%s/%s", baseSensorPath, snr)
-	utilities.WriteStringValue(path, "mode", "IR-PROX")
-	value := utilities.ReadUInt8Value(path, "value0")
+	utilities.WriteStringValue(self.path, "mode", "IR-PROX")
+	value := utilities.ReadUInt8Value(self.path, "value0")
 
 	return value
 }
 
 // Blocks until the infrared sensor detects a nearby object.
 func (self *InfraredSensor) WaitForProximity() {
+
 	for {
 		p1 := self.ReadProximity()
 		time.Sleep(time.Millisecond * 100)
@@ -78,9 +117,7 @@ func (self *InfraredSensor) WaitForProximity() {
 
 // Turns on the remote control mode.
 func (self *InfraredSensor) RemoteModeOn() {
-	snr := findSensor(self.port, TypeInfrared)
-	path := fmt.Sprintf("%s/%s", baseSensorPath, snr)
-	utilities.WriteStringValue(path, "mode", "IR-REMOTE")
+	utilities.WriteStringValue(self.path, "mode", "IR-REMOTE")
 }
 
 // Registers a callback to be triggered when a remote button is pressed. The listening
